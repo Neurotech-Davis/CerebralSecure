@@ -1,6 +1,7 @@
-import time
-import pickle
 import numpy as np
+import logging
+import pickle
+import time
 
 from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds, BrainFlowPresets
 from brainflow.data_filter import DataFilter, FilterTypes, AggOperations, NoiseTypes
@@ -12,7 +13,6 @@ class CerebralSecure:
         self.sampling_rate = board.get_sampling_rate()
         
         self.board = board
-        self.board.prepare_session()
 
         self.focus_jaw_data = None
         self.blink_data = None
@@ -21,6 +21,7 @@ class CerebralSecure:
         self.focus_model = pickle.load(open('./.pk1' , 'rb'))
 
         self.code = ""
+        self.code_length = 6
 
 
     def run(self):
@@ -28,7 +29,7 @@ class CerebralSecure:
         
         '''
 
-        self.prompt_input()
+        self.get_code()
 
         self.authenticate()
 
@@ -45,14 +46,38 @@ class CerebralSecure:
         self.focus_jaw_data = self.data.reshape(1, -1)
         
     
-    def prompt_input(self):
-        self.focus_jaw_data = self.focus_jaw_data = self.board.get_current_board_data(250)
+    def get_code(self):
+        '''
+        Get the users password as long as they are focused and muscle activity was detected
+        '''
 
+        i = 0
+        while (i < self.code_length):
+            self.prompt_input()
+
+            time.sleep(1.5)
+
+            self.focus_jaw_data = self.focus_jaw_data = self.board.get_current_board_data(250)
+            self.filter_data()
+
+            if (self.is_focused()):
+                if(self.muscle_action):     # must be nested in order to not update code if unfocused
+                    i += 1
+
+
+    def prompt_input(self):
         pass
     
-    
+    def no_action(self):
+        pass
+
+    def unfocused(self):
+        pass
+
+
     def authenticate(self):
         pass
+
 
     def filter_data(self):
         '''
@@ -69,17 +94,21 @@ class CerebralSecure:
     def is_focused(self):
         '''
         Checks already filtered self.focus_jaw_data against self.focus_model classifier to
-        see if the user was focused
+        see if the user was focused. Notifies the user if they were unfocused.
 
         Returns:
         return_type: 1 if the user is focused, 0 otherwise
         '''
+        if (~self.focus_model.predict(self.focus_jaw_data)[0]):
+            self.unfocused()
+            return False
 
-        return self.focus_model.predict(self.focus_jaw_data)[0]
+        return True
 
     def muscle_action(self):
         '''
-        Updates self.code based on classification of muscle movement data
+        Updates self.code based on classification of muscle movement data. Notifies the user
+        if no action was detected.
 
         Returns:
         return_type: False if user performed no action, True if action was detected
@@ -90,6 +119,7 @@ class CerebralSecure:
 
         if (jaw_clench == 0 and blinking == 0):
             # No action
+            self.no_action()
             return False
         
         elif (jaw_clench == 1 and blinking == 2):
@@ -112,29 +142,26 @@ class CerebralSecure:
 def main():
     params = BrainFlowInputParams()
 
-    # Data Acquisition from Sythetic Board
-    board = BoardShim(BoardIds.SYNTHETIC_BOARD, params)
-
-    # Data Acquisition from Real Board
-    #params.serial_port = "COM3"
-    #board = BoardShim(BoardIds.CYTON_BOARD, params)
-    
-    board.prepare_session()
-    board.start_stream ()
-    time.sleep(10)
-    # data = board.get_current_board_data (256) # get latest 256 packages or less, doesnt remove them from internal buffer
-    data = board.get_board_data()  # get all data and remove it from internal buffer
-    board.stop_stream()
-    board.release_session()
-
-    print(data)
-
     try:
-        pass
+        # Data Acquisition from Sythetic Board
+        board = BoardShim(BoardIds.SYNTHETIC_BOARD, params)
+
+        # Data Acquisition from Real Board
+        #params.serial_port = "COM3"
+        #board = BoardShim(BoardIds.CYTON_BOARD, params)
+
+        board.prepare_session()
+        board.start_stream ()
+        
+        cerebral_secure = CerebralSecure(board)
+        cerebral_secure.run()
+        
     except:
-        pass
+        logging.warning("Exception", exc_info=True)
     finally:
-        pass
+        logging.info("Releasing Session")
+        board.stop_stream()
+        board.release_session()
 
 
 
