@@ -23,6 +23,11 @@ class CerebralSecure:
         self.code = ""
         self.code_length = 6
 
+        self.focus_file = open("./focus_file.txt", "w")
+        self.action_file = open("./action_file.txt", "w")
+        self.prompt_file = open("./prompt_file.txt", "w")
+        self.code_file = open("./code_file.txt", "w")
+
 
     def run(self):
         '''
@@ -66,13 +71,43 @@ class CerebralSecure:
 
 
     def prompt_input(self):
-        pass
+        '''
+        Write to prompting file to notify that the user must be prompted for input
+        '''
+
+        self.prompt_file = open("./prompt_file.txt", "w")
+        self.prompt_file.write("prompting")
+        self.prompt_file.close()
+
     
     def no_action(self):
-        pass
+        '''
+        Write to action file notifying that the user performed no valid action
+        '''
+
+        self.action_file = open("./action_file.txt", "w")
+        self.action_file.write("0")
+        self.action_file.close()
 
     def unfocused(self):
-        pass
+        '''
+        Write to focus file notifying that user is unfocused
+        '''
+
+        self.focus_file = open("./focus_file.txt", "w")
+        self.focus_file.write("0")
+        self.focus_file.close()
+
+
+    def clean_files(self):
+        '''
+        Empty cross-communication files
+        '''
+
+        self.prompt_file.close()
+        self.action_file.close()
+        self.focus_file.close()
+        self.code_file.close()
 
 
     def authenticate(self):
@@ -162,7 +197,6 @@ def main():
         logging.info("Releasing Session")
         board.stop_stream()
         board.release_session()
-
 
 
 main()
