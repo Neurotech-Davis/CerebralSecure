@@ -18,15 +18,12 @@ class CerebralSecure:
         self.blink_data = None
 
         self.emg_model = pickle.load(open('./jawclenchmodel.pk1' , 'rb'))
-        self.focus_model = pickle.load(open('./.pk1' , 'rb'))
+        self.focus_model = pickle.load(open('./focusmodel.pk1' , 'rb'))
 
         self.code = ""
         self.code_length = 6
 
-        self.focus_file = open("./focus_file.txt", "w")
-        self.action_file = open("./action_file.txt", "w")
-        self.prompt_file = open("./prompt_file.txt", "w")
-        self.code_file = open("./code_file.txt", "w")
+        self.code_file = open("./COMM_Files/code_file.txt", "w")
 
 
     def run(self):
@@ -70,14 +67,31 @@ class CerebralSecure:
                     i += 1
 
 
-    def prompt_input(self):
+    def write_code(self):
         '''
-        Write to prompting file to notify that the user must be prompted for input
+        Write the code to a file that will be accessed by the authentication system
         '''
 
-        self.prompt_file = open("./prompt_file.txt", "w")
-        self.prompt_file.write("prompting")
-        self.prompt_file.close()
+        code_file = open("./COMM_Files/code_file.txt", "w")
+        code_file.write(self.code)
+        code_file.close()
+
+
+    def prompt_input(self):
+        '''
+        Write to a status file to notify that the user must be prompted for input. Waits
+        until a response is received in that file.
+        '''
+
+        status_file = open("./COMM_Files/status_file.txt", "w")
+        status_file.write("prompting")
+        status_file.close()
+
+        status = ""
+        while (status != "read"):
+            status_file = open("./COMM_Files/status_file.txt", "r")
+            status = status_file.read()
+            status_file.close()
 
     
     def no_action(self):
@@ -85,29 +99,19 @@ class CerebralSecure:
         Write to action file notifying that the user performed no valid action
         '''
 
-        self.action_file = open("./action_file.txt", "w")
-        self.action_file.write("0")
-        self.action_file.close()
+        action_file = open("./COMM_Files/action_file.txt", "w")
+        action_file.write("0")
+        action_file.close()
+
 
     def unfocused(self):
         '''
         Write to focus file notifying that user is unfocused
         '''
 
-        self.focus_file = open("./focus_file.txt", "w")
-        self.focus_file.write("0")
-        self.focus_file.close()
-
-
-    def clean_files(self):
-        '''
-        Empty cross-communication files
-        '''
-
-        self.prompt_file.close()
-        self.action_file.close()
-        self.focus_file.close()
-        self.code_file.close()
+        focus_file = open("./COMM_Files/focus_file.txt", "w")
+        focus_file.write("0")
+        focus_file.close()
 
 
     def authenticate(self):
